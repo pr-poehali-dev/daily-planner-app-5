@@ -18,8 +18,8 @@ const THRESHOLD = 60;
 export default function TaskCard({ task, priorities, directions, onToggle, onDelete, onOpen }: TaskCardProps) {
   const [swipeX, setSwipeX] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const startX = useRef(0);
-  const currentX = useRef(0);
   const dragging = useRef(false);
   const moved = useRef(false);
 
@@ -35,9 +35,17 @@ export default function TaskCard({ task, priorities, directions, onToggle, onDel
   const snapOpen = () => { setIsOpen(true); setSwipeX(SWIPE_OPEN); };
   const snapClose = () => { setIsOpen(false); setSwipeX(0); };
 
+  const handleToggle = () => {
+    if (task.done) { onToggle(task.id); return; }
+    setCompleting(true);
+    setTimeout(() => {
+      onToggle(task.id);
+      setCompleting(false);
+    }, 420);
+  };
+
   const onStart = (x: number) => {
     startX.current = x;
-    currentX.current = isOpen ? SWIPE_OPEN : 0;
     dragging.current = true;
     moved.current = false;
   };
@@ -62,7 +70,7 @@ export default function TaskCard({ task, priorities, directions, onToggle, onDel
   };
 
   const actions = [
-    { icon: 'Check', color: '#6b9e78', action: () => { onToggle(task.id); snapClose(); } },
+    { icon: 'Check', color: '#6b9e78', action: () => { handleToggle(); snapClose(); } },
     { icon: 'Pencil', color: '#3b82f6', action: () => { onOpen(task); snapClose(); } },
     { icon: 'Trash2', color: '#ef4444', action: () => { onDelete(task.id); snapClose(); } },
   ];
@@ -96,6 +104,7 @@ export default function TaskCard({ task, priorities, directions, onToggle, onDel
           transform: `translateX(${swipeX}px)`,
           transition: dragging.current ? 'none' : 'transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)',
           borderRadius: 16,
+          opacity: completing ? 0.6 : 1,
         }}
         onTouchStart={e => onStart(e.touches[0].clientX)}
         onTouchMove={e => onMove(e.touches[0].clientX)}
@@ -110,23 +119,57 @@ export default function TaskCard({ task, priorities, directions, onToggle, onDel
           onOpen(task);
         }}
       >
+        {/* Checkbox */}
         <button
           onMouseDown={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); if (!moved.current) onToggle(task.id); }}
-          className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200"
+          onClick={e => { e.stopPropagation(); if (!moved.current) handleToggle(); }}
+          className="mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300"
           style={{
-            borderColor: task.done ? '#6b9e78' : priority?.color || '#d1d5db',
-            backgroundColor: task.done ? '#6b9e78' : 'transparent',
+            borderColor: task.done ? '#6b9e78' : completing ? '#6b9e78' : priority?.color || '#d1d5db',
+            backgroundColor: task.done || completing ? '#6b9e78' : 'transparent',
+            transform: completing ? 'scale(1.2)' : 'scale(1)',
           }}
         >
-          {task.done && <Icon name="Check" size={11} color="white" />}
+          {(task.done || completing) && (
+            <Icon name="Check" size={11} color="white"
+              style={{
+                transition: 'opacity 0.2s',
+                opacity: completing || task.done ? 1 : 0,
+              }}
+            />
+          )}
         </button>
 
-        <div className="flex-1 min-w-0">
-          <p className={`text-sm font-medium leading-snug ${task.done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-            {task.title}
-          </p>
-          <div className="flex flex-wrap items-center gap-2 mt-1.5">
+        <div className="flex-1 min-w-0 overflow-hidden">
+          {/* Title with animated strikethrough */}
+          <div className="relative">
+            <p className="text-sm font-medium leading-snug text-foreground"
+              style={{
+                color: task.done ? 'hsl(220 10% 55%)' : 'hsl(220 15% 16%)',
+                transition: 'color 0.35s ease',
+              }}>
+              {task.title}
+            </p>
+            {/* Strikethrough line */}
+            <div
+              className="absolute left-0 top-1/2 h-px bg-muted-foreground pointer-events-none rounded-full"
+              style={{
+                width: task.done ? '100%' : completing ? '100%' : '0%',
+                transition: completing
+                  ? 'width 0.35s cubic-bezier(0.4,0,0.2,1)'
+                  : task.done
+                  ? 'none'
+                  : 'width 0.2s ease',
+                opacity: task.done || completing ? 0.45 : 0,
+              }}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 mt-1.5"
+            style={{
+              opacity: task.done || completing ? 0.5 : 1,
+              transition: 'opacity 0.35s ease',
+            }}>
             {priority && (
               <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
                 style={{ backgroundColor: priority.color + '18', color: priority.color }}>

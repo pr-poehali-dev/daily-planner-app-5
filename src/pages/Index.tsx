@@ -6,7 +6,6 @@ import DirectionsView from '@/components/planner/DirectionsView';
 import HabitsView from '@/components/planner/HabitsView';
 import StatsView from '@/components/planner/StatsView';
 import TaskModal from '@/components/planner/TaskModal';
-import SettingsModal from '@/components/planner/SettingsModal';
 import Icon from '@/components/ui/icon';
 
 const NAV_ITEMS: { id: AppView; icon: string; label: string }[] = [
@@ -21,7 +20,6 @@ export default function Index() {
   const [view, setView] = useState<AppView>('time');
   const [dayTab, setDayTab] = useState<'today' | 'tomorrow' | 'other'>('today');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
 
   const todayLabel = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
   const today = todayLabel;
@@ -62,12 +60,7 @@ export default function Index() {
               </p>
             )}
           </div>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="w-9 h-9 bg-white rounded-xl shadow-soft flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Icon name="Settings2" size={18} />
-          </button>
+          <div className="w-9 h-9" />
         </div>
 
         {view === 'time' && (totalToday + doneToday) > 0 && (
@@ -225,18 +218,6 @@ export default function Index() {
         />
       )}
 
-      {/* Settings Modal */}
-      {showSettings && (
-        <SettingsModal
-          priorities={store.priorities}
-          timeCategories={store.timeCategories}
-          directions={store.directions}
-          onClose={() => setShowSettings(false)}
-          onUpdatePriority={store.updatePriority}
-          onUpdateTimeCategory={store.updateTimeCategory}
-          onUpdateDirection={store.updateDirection}
-        />
-      )}
     </div>
   );
 }
