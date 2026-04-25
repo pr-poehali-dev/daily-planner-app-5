@@ -19,6 +19,7 @@ const NAV_ITEMS: { id: AppView; icon: string; label: string }[] = [
 export default function Index() {
   const store = usePlannerStore();
   const [view, setView] = useState<AppView>('time');
+  const [dayTab, setDayTab] = useState<'today' | 'tomorrow' | 'other'>('today');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -38,7 +39,12 @@ export default function Index() {
   };
 
   const totalToday = store.tasks.filter(t => !t.done && (t.categoryId === 'today' || t.dueDate === todayStr)).length;
+  const totalTomorrow = store.tasks.filter(t => !t.done && (t.categoryId === 'tomorrow' || t.dueDate === tomorrowStr)).length;
   const doneToday = store.tasks.filter(t => t.done).length;
+
+  const todayCats = store.timeCategories.filter(c => c.type === 'today' || c.type === 'inbox');
+  const tomorrowCats = store.timeCategories.filter(c => c.type === 'tomorrow');
+  const otherCats = store.timeCategories.filter(c => c.type === 'scheduled' || c.type === 'someday' || c.type === 'done');
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto">
@@ -80,13 +86,45 @@ export default function Index() {
             </div>
           </div>
         )}
+
+        {view === 'time' && (
+          <div className="mt-4 flex gap-1 bg-muted rounded-2xl p-1">
+            {([
+              { id: 'today' as const, label: 'Сегодня', count: totalToday },
+              { id: 'tomorrow' as const, label: 'Завтра', count: totalTomorrow },
+              { id: 'other' as const, label: 'Остальное', count: 0 },
+            ]).map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setDayTab(tab.id)}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-xl transition-all duration-200"
+                style={{
+                  backgroundColor: dayTab === tab.id ? 'white' : 'transparent',
+                  color: dayTab === tab.id ? 'hsl(220 15% 16%)' : 'hsl(220 10% 55%)',
+                  boxShadow: dayTab === tab.id ? '0 2px 8px rgba(0,0,0,0.07)' : 'none',
+                }}
+              >
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                    style={{
+                      backgroundColor: dayTab === tab.id ? 'hsl(150 25% 42% / 0.15)' : 'transparent',
+                      color: dayTab === tab.id ? 'hsl(150 25% 42%)' : 'hsl(220 10% 65%)',
+                    }}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {view === 'time' && (
-          <div className="px-4">
-            {store.timeCategories.map(category => {
+          <div className="px-4 animate-fade-in" key={dayTab}>
+            {(dayTab === 'today' ? todayCats : dayTab === 'tomorrow' ? tomorrowCats : otherCats).map(category => {
               const tasks = getTasksForTimeCategory(category.id);
               return (
                 <CategorySection
