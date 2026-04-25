@@ -4,14 +4,16 @@ import { Task, AppView } from '@/types/planner';
 import CategorySection from '@/components/planner/CategorySection';
 import DirectionsView from '@/components/planner/DirectionsView';
 import HabitsView from '@/components/planner/HabitsView';
+import StatsView from '@/components/planner/StatsView';
 import TaskModal from '@/components/planner/TaskModal';
 import SettingsModal from '@/components/planner/SettingsModal';
 import Icon from '@/components/ui/icon';
 
 const NAV_ITEMS: { id: AppView; icon: string; label: string }[] = [
   { id: 'time', icon: 'Clock', label: 'Задачи' },
-  { id: 'directions', icon: 'Compass', label: 'Направления' },
+  { id: 'directions', icon: 'Compass', label: 'Цели' },
   { id: 'habits', icon: 'TrendingUp', label: 'Привычки' },
+  { id: 'stats', icon: 'BarChart2', label: 'Статистика' },
 ];
 
 export default function Index() {
@@ -20,7 +22,8 @@ export default function Index() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  const today = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  const todayLabel = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  const today = todayLabel;
   const todayStr = new Date().toISOString().split('T')[0];
   const tomorrowStr = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })();
 
@@ -45,7 +48,7 @@ export default function Index() {
           <div>
             <p className="text-xs text-muted-foreground capitalize mb-0.5">{today}</p>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              {view === 'time' ? 'Мои задачи' : view === 'directions' ? 'Направления' : 'Привычки'}
+              {view === 'time' ? 'Мои задачи' : view === 'directions' ? 'Направления' : view === 'habits' ? 'Привычки' : 'Статистика'}
             </h1>
             {view === 'time' && totalToday > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
@@ -127,6 +130,14 @@ export default function Index() {
             onAdd={store.addHabit}
             onDelete={store.deleteHabit}
             onUpdate={store.updateHabit}
+          />
+        )}
+
+        {view === 'stats' && (
+          <StatsView
+            tasks={store.tasks}
+            habits={store.habits}
+            directions={store.directions}
           />
         )}
       </div>

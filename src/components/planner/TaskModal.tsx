@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Task, Priority, Direction, SubTask } from '@/types/planner';
+import { Task, Priority, Direction } from '@/types/planner';
 import Icon from '@/components/ui/icon';
 
 interface TaskModalProps {
   task: Task | null;
   priorities: Priority[];
   directions: Direction[];
-  timeCategories: { id: string; name: string }[];
+  timeCategories: { id: string; name: string; type?: string }[];
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
@@ -15,11 +15,26 @@ interface TaskModalProps {
   generateId: () => string;
 }
 
+const getDateStr = (offset: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().split('T')[0];
+};
+
+const RESCHEDULE_OPTIONS = [
+  { label: 'Сегодня', icon: 'Sun', color: '#f59e0b', date: () => getDateStr(0), categoryId: 'today' },
+  { label: 'Завтра', icon: 'Sunrise', color: '#8b5cf6', date: () => getDateStr(1), categoryId: 'tomorrow' },
+  { label: 'Через 3 дня', icon: 'CalendarDays', color: '#3b82f6', date: () => getDateStr(3), categoryId: 'scheduled' },
+  { label: 'На неделю', icon: 'Calendar', color: '#6b9e78', date: () => getDateStr(7), categoryId: 'scheduled' },
+  { label: 'Когда-нибудь', icon: 'Cloud', color: '#94a3b8', date: () => null, categoryId: 'someday' },
+];
+
 export default function TaskModal({
   task, priorities, directions, timeCategories,
   onClose, onUpdate, onToggleSubtask, onAddSubtask, onDeleteSubtask,
 }: TaskModalProps) {
   const [newSubtask, setNewSubtask] = useState('');
+  const [showReschedule, setShowReschedule] = useState(false);
 
   if (!task) return null;
 
@@ -30,6 +45,15 @@ export default function TaskModal({
     }
   };
 
+  const handleReschedule = (opt: typeof RESCHEDULE_OPTIONS[0]) => {
+    onUpdate(task.id, {
+      dueDate: opt.date(),
+      categoryId: opt.categoryId,
+      done: false,
+    });
+    setShowReschedule(false);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
@@ -38,6 +62,7 @@ export default function TaskModal({
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
+          {/* Header */}
           <div className="flex items-start gap-3 mb-6">
             <button
               onClick={() => onUpdate(task.id, { done: !task.done })}
@@ -60,6 +85,46 @@ export default function TaskModal({
             </button>
           </div>
 
+          {/* Reschedule block */}
+          <div className="mb-5">
+            <button
+              onClick={() => setShowReschedule(s => !s)}
+              className="w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl border border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group"
+            >
+              <div className="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Icon name="CalendarClock" size={15} style={{ color: 'hsl(150 25% 42%)' }} />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">
+                Перенести задачу
+              </span>
+              <Icon name={showReschedule ? 'ChevronUp' : 'ChevronDown'} size={14} className="ml-auto text-muted-foreground" />
+            </button>
+
+            {showReschedule && (
+              <div className="mt-2 grid grid-cols-1 gap-1.5 animate-fade-in">
+                {RESCHEDULE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.label}
+                    onClick={() => handleReschedule(opt)}
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-muted transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: opt.color + '20' }}>
+                      <Icon name={opt.icon} fallback="Calendar" size={14} style={{ color: opt.color }} />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{opt.label}</span>
+                    {opt.date() && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {new Date(opt.date()! + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Fields */}
           <div className="grid grid-cols-2 gap-3 mb-5">
             <div>
               <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Приоритет</label>
@@ -106,6 +171,7 @@ export default function TaskModal({
             </div>
           </div>
 
+          {/* Notes */}
           <div className="mb-5">
             <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Заметки</label>
             <textarea
@@ -117,6 +183,7 @@ export default function TaskModal({
             />
           </div>
 
+          {/* Subtasks */}
           <div>
             <label className="text-xs text-muted-foreground mb-3 block font-medium">
               Подзадачи {task.subtasks.length > 0 && `(${task.subtasks.filter(s => s.done).length}/${task.subtasks.length})`}
@@ -126,7 +193,7 @@ export default function TaskModal({
                 <div key={st.id} className="flex items-center gap-2.5 group/st">
                   <button
                     onClick={() => onToggleSubtask(task.id, st.id)}
-                    className="shrink-0 w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center transition-all"
+                    className="shrink-0 rounded-full border-2 flex items-center justify-center transition-all"
                     style={{
                       borderColor: st.done ? '#6b9e78' : '#d1d5db',
                       backgroundColor: st.done ? '#6b9e78' : 'transparent',

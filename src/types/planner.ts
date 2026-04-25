@@ -57,4 +57,4 @@ export type Habit = {
   createdAt: string;
 };
 
-export type AppView = 'time' | 'directions' | 'habits';
+export type AppView = 'time' | 'directions' | 'habits' | 'stats';
